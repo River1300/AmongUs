@@ -254,3 +254,196 @@ transform.Rotate(0f, 90f, 0f); 이 코드는 매 프레임마다 현재 오브�
     => 따라서 매 프레임마다 오브젝트가 현재 회전값에 따라 추가적으로 90도씩 회전하게 된다. 
     => 이는 누적 회전을 수행한다. 
 */
+
+/*
+#3. 온라인 UI 와 방 만들기 UI 만들기
+
+    1. 온라인 UI 에서 방 만들기 UI 배치
+        a. Canvas 의 자식으로 방 만들기 UI 이미지를 만든다.
+            => 온라인 버튼 선택 -> 방 만들기 버튼 선택 -> 방 만들기 UI
+            => 해상도 변경을 고려하기 위해 앵커를 가득 채운다.
+        b. 맵 배너 UI 이미지, 임포스터 수 Text, 최대 인원 수 Text 를 추가한다.
+        c. 임포스터 수 선택 버튼과 최대 인원 수 선택 버튼을 만든다.
+            => 버튼의 테두리 이미지 알파값을 0으로 조정
+            => 버튼들을 상위 빈 오브젝트에 넣고 정렬을 위해 Horizontal Layout Group, Content Size Fitter 컴포넌트를 부착한다.
+        d. 기본으로 선택되는 임포스터 수 1과 최대 인원 10의 테두리 이미지의 알파값을 1로 조정
+        e. 맵 배너 위에 선택된 최대 인원과 임포스터 수에 따라서 보이는 크루원 이미지 UI를 추가
+            => 인원 수 버튼 UI와 마찬가지로 정렬
+            => 기존에 만들었던 Sprite Lit Shader Graph 를 넣었던 마테리얼 M_Crew를 넣었을때 크루원 주변에 검은 배경이 생기는 문제가 있다.
+            => 버전이 바뀌면서 발생하는 문제로 보여진다.
+            => 2D 스프라이트로 만든 크루원은 잘 작동하지만 UI Image로 만든 크루원은 검은 배경이 생긴다.
+            => Sprite Lit Shader는 UI에는 제대로 적용이 안되는것으로 보인다.
+            => Lit Shader Graph 를 새로 만든다.
+            => 기존 쉐이더 그래프에서 만들었던 요소들만 복사붙여넣기 해준다.
+            => Lit Shader Graph 에는 Alpha 값을 넣어줄 부분이 안보이기 때문에 Graph Inspector -> Graph Settings -> Alpha Clipping 을 체크해주면 Alpha가 생긴다.
+            => 변수들도 연결해준 후 저장 후에 메테리얼에 쉐이더 연결해주고 새로 만든 메테리얼을 넣어준다.
+            => 이때 Game view 에서는 문제가 없고, Scene view 에서는 크루 이미지가 모든 다른 UI에 가려져 보이지 않는 문제가 발생한다. 
+            => 새로 만든 shader -> Graph Inspector -> Graph Settings -> Surface Type 을 Transparent 로 바꿔준다.
+
+    2. 크루원 이미지 변경 기능 구현
+        a. 방 만들기 UI에서 기능을 컨트롤할 CreateRoomUI 스크립트를 만든다.
+            => 방 만들기 UI의 속성을 구조체로 만든다.
+                => 임포스터 수, 최대 인원 수
+                => 이 구조체를 이용해서 새로 만든 방의 데이터를 저장해 두고 새로 만들어진 방에 데이터를 전달한다.
+        b. 이미지를 담을 리스트, 버튼을 담을 리스트를 속성으로 만든다.
+        c. 구조체 데이터를 속성으로 만든다.
+        d. 임포스터, 플레이어 수에 따라 크루원 이미지가 출력되도록 갱신해줄 함수를 만든다.
+            UpdateCrewImages
+            {
+                1. 구조체 속성에 저장되어 있는 임포스터 수를 받아서
+                int imposterCount = roomData.imposterCount;
+                2. 그 수가 0이 될 때 까지 
+                int index = 0;
+                while(imposterCount != 0)
+                {
+                    3. 반복문을 돌며 랜덤한 크루원을 뽑는데, 이때 랜덤한 크루원이 선택되기 전에 배열을 넘을 경우 처음으로 돌아간다.
+                    if(index >= roomData.maxPlayerCount) index = 0;
+                    4. 크루원의 이미지를 랜덤으로 뽑아 빨간색으로 만든다.
+                    if(crewImgs[index].material.GetColor("_PlayerColor") != Color.red && Random.Range(0, 5) == 0)
+                    {
+                        crewImgs[index].material.SetColor("PlayerColor", Color.red);
+                        imposterCount--;
+                    }
+                    index++;
+                }
+                // 5. 설정한 플레이어 수 만큼만 크루원 이미지를 활성화 시킨다.
+                for(int i = 0; i < crewImgs.Count; i++)
+                {
+                    if(i < roomData.maxPlayerCount)
+                    {
+                        crewImgs[i].gameObject.SetActive(true);
+                    }
+                    else
+                    {
+                        crewImgs[i].gameObject.SetActive(false);
+                    }
+                }
+            }
+        e. 처음 방 만들기 UI 에 들어왔을 때 초기 값을 지정해 준다.
+            Start()
+            {
+                roomData = new CreateGameRoomData() { imposterCount = 1, maxPlayerCount = 10 };
+                UpdateCrewImages();
+            }
+        f. 테스트를 해보면 10명의 크루원 모드 임포스터 색으로 출력되는 것을 볼 수 있다.
+            => 유니티 엔진에서 인스턴스화 하지 않은 오브젝트에 적용된 마테리얼을 수정하면
+            => 원본 마테리얼이 변경되는 특성 때문에 모두가 변경된 색상으로 출력되는 것
+            => 이 문제를 해결하기 위해 마테리얼을 인스턴스화 하여 원본이 아닌 복제된 마테리얼을 사용해야 한다.
+        g. Start 함수에서 crewImgs 에 마테리얼을 Instantitate 함수로 복제된 마테리얼 인스턴스를 만들어서 크루원 이미지들의 마테리얼을 바꿔준다.
+            {
+                for(int i = 0; i < crewImgs.Count; i++)
+                {
+                    // 1. 마테리얼을 인스턴스화 하여 복제한 뒤에
+                    Material materialInstance = Instantitate(crewImgs[i].material);
+                    // 2. 복제한 마테리얼을 크루원에 적용
+                    crewImgs[i].material = materialInstance;
+                }
+            }
+        h. UpdateCrewImages 함수에서 크루원의 색상을 바꿔주기 전에 색상을 초기화 하는 작업을 한다.
+            {
+                for(int i = 0; i < crewImgs.Count; i++)
+                {
+                    crewImgs[i].material.SetColor("_PlayerColor", Color.white);
+                }
+            }
+
+    3. 최대 인원수 선택 기능 구현
+        a. 최대 인원 수를 변경하는 UpdateMaxPlayerCount() 함수를 만든다.
+            => 매개변수로 버튼이 선택될 때 인원 수를 전달 받는다.
+        b. 전달 받은 매개변수를 구조체 데이터에 저장하고 이미지 UI를 출력한다.
+            {
+                1. 매개변수를 데이터에 배정
+                roomData.maxPlayerCount = count;
+
+                for(int i = 0; i < maxPlayerCountButtons.Count; i++)
+                {
+                    if(i == count - 5)
+                    {
+                        2. 선택된 버튼 이미지 UI 의 알파값을 조정
+                        maxPlayerCountButtons[i].image.color = new Color( 1f, 1f, 1f, 1f );
+                    }
+                    else
+                    {
+                        maxPlayerCountButtons[i].image.color = new Color( 1f, 1f, 1f, 0f );
+                    }
+                }
+                3. 버튼의 알파 값을 조정한 뒤에 크루원 이미지 출력
+                UpdateCrewImages();
+            }
+        c. 인원 수 버튼마다 함수를 연결하여 매개변수를 지정한다.
+
+    4. 임포스터 수 선택 기능 구현
+        a. 임포스터 수를 선택하는 UpdateImposterCount() 함수를 만든다.
+            {
+                1. 최대 인원과 마찬가지로 매개변수로 값을 받아와서 데이터에 저장한다.
+                roomData.imposterCount = count;
+                2. 선택된 버튼의 이미지 UI 를 표시
+                for(int i = 0; i < imposterCountButton.Count; i++)
+                {
+                    if(i == count - 1)
+                    {
+                        imposterCountButton[i].image.color = new Color(1f, 1f, 1f, 1f);
+                    }
+                    else
+                    {
+                        imposterCountButton[i].image.color = new Color(1f, 1f, 1f, 0f);
+                    }
+                }
+            }
+        b. 임포스터  수에 따라 최대 인원수 제한을 걸도록 한다.
+            변수를 만들어서 임포스터 매개변수 값에 따라 제한할 플레이어 인원 수를 저장한다.
+            {
+                ...
+                int limitMaxPlayer = count = 1 ? 4 : count == 2 ? 7 : 9;
+                1. 데이터의 플레이어 수가 제한 값보다 작다면 제한 값을 UpdateMaxPlayer() 함수의 매개변수로 전달하여 함수를 호출한다.
+                if(roomData.maxPlayerCount < limitMaxPlayer)
+                {
+                    UpdateMaxPlayerCount(limitMaxPlayer);
+                }
+                2. 데이터의 플레이어 수가 더 크다면 데이터 값으로 함수를 호출한다.
+                else
+                {
+                    UpdateMaxPlayerCount(roomData.maxPlayerCount);
+                }
+            }
+        c. 제한 값보다 작은 수의 버튼을 비활성화 한다.
+            for(int i = 0; i < maxPlayerCountButtons.Count; i++)
+            {
+                var text = maxPlayerCountButtons[i].GetComponentInChildren<Text>();
+                if(i < limitMaxPlayer - 5)
+                {
+                    maxPlayerCountButton[i].interactable = false;
+                    text.color = Color.gray;
+                }
+                else
+                {
+                    maxPlayerCountButtons[i].interactable = true;
+                    text.color = color.white;
+                }
+            }
+
+    5. 온라인 UI 와 방 만들기 UI 연결
+        a. 방 만들기 UI 에서 취소 버튼에 온라인 UI 와 방 만들기 UI 오브젝트를 연결하여 활성화/비활성화를 버튼에 등록한다.
+        b. 온라인 UI 에서 방 만들기 버튼을 누를 때 사용자 이름을 작성하지 않았을 경우
+            입력창에 애니메이션을 등록해 준다.
+        c. OnlineUI 스크립트를 만든다.
+        d. 사용자 이름을 입력 받을 InputField 와 방 만들기 UI 게임 오브젝트를 속성으로 만든다.
+        e. 방 만들기 버튼을 눌렀을 때 실행될 함수를 만든다. OnClickCreateRoomButton()
+            {
+                1. 입력 받은 값이 있다면 방 만들기 UI 활성화 
+                if(nicknameInputField.text != "")
+                {
+                    createRoomUI.SetActive(true);
+                    gameObject.SetActive(false);
+                }
+                else
+                {
+                    2. 입력 받은 값이 없다면 애니메이션 출력
+                    nicknameInputField.GetComponent<Animator>().SetTrigger("On");
+                }
+            }
+        f. PlayerSetting 클래스에 속성으로 사용자 이름을 만든다.
+            public statuc string nickname;
+        g. 방 만들기 버튼이 눌렸을 때 입력 받은 사용자 이름을 저장한다.
+            PlayerSetting.nickname = nicknameInputField.text;
+*/

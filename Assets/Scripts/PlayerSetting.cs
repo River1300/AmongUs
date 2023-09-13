@@ -18,4 +18,6 @@ public class PlayerSetting
     // 다른 스크립트에서 게임의 설정을 변경할 필요가 있다. 
     //  => 정적 변수를 통해 한 곳에서 설정을 변경하면 다른 스크립트에서 업데이트된 설정을 읽을 수 있다.
     public static EControlType controlType;
+    // 방을 만들때 입력 받은 텍스트를 저장해 두었다가 만들어진 방에 전달한다.
+    public static string nickname;
 }
