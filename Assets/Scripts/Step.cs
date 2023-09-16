@@ -447,3 +447,71 @@ transform.Rotate(0f, 90f, 0f); 이 코드는 매 프레임마다 현재 오브�
         g. 방 만들기 버튼이 눌렸을 때 입력 받은 사용자 이름을 저장한다.
             PlayerSetting.nickname = nicknameInputField.text;
 */
+
+/*
+#4. Mirror 네트워크 설치와 Room Manager 세팅
+    
+    1. Among Us Room Manager 만들기
+        a. Room Manager : Offline Scene -> Game Room Scene -> Gameplay Scene 3단 구조로 게임을 관리
+            => 네트워크 통신에 도음울 주는 클래스를 만든다.( AmongUsRoomManager )
+        b. Mirror 네임스페이스 선언
+        c. NetworkRoomManager 를 상속받는다.
+
+    2. Offline Scene 과 Online Scene 세팅
+        a. 에디터로 돌아와 빈 오브젝트에 스크립트 부착
+            => Room Manager 의 프로퍼티 중 Scene Management 섹션에 Offline/Online Scene 을 지정
+                => Offline Scene : 게임을 위한 네트워크에 접속하지 않은 씬을 의미
+                    => MainMenuScene 을 지정
+                => Online Scene : 게임 네트워크에 접속한 후 실제 게임이 시작되기 전, 즉 게임 대기실 씬을 의미
+                    => GameRoomScene 을 만들고 지정
+    3. Room Scene 과 Gameplay Scene 세팅
+        a. Room Settings 섹션에 Room Scene, Gameplay Scene 를 지정
+            => Offline Scene 과 Online Scene 이 게임 네트워크 접속 이전 씬과 게임 대기실 씬을 다룬다면,
+            => Room Scene 과 Gameplay Scene 은 플레이어들이 접속해서 게임이 준비되기를 기다리는 대기실과 실제로 게임을 플레이하는 멀티플레이 씬을 다룬다.
+        b. Room Scene 에는 GameRoomScene 을 지정
+        c. 게임을 플레이하는데 사용된 Gameplay 씬을 만들어서 Gameplay Scene 에 지정
+
+    4. Room Player Prefab 세팅
+        a. Player Object 섹션에 있는 Player Prefab
+        b. Room Setting 섹션에 있는 Room Player Prefab
+            => Room Player Prefab : 게임 대기실에 입장한 플레이어의 오브젝트를 의미
+                => 이 오브젝트를 통해서 대기실에 입장한 플레이어의 정보를 저장하고 통신을 주고 받게 된다.
+            => AmongUsRoomPlayer 스크립트 생성
+                => Mirror 네임스페이스 등록
+                => NetworkRoomPlayer 상속
+            => 빈 게임 오브젝트를 생성하고 스크립트 부착
+                => 프리팹 화 하여 Room Player Prefab 프로퍼티에 지정
+                    => 이제 게임 대기실이 만들어지고 플레이어가 접속하면 
+                    => Room Manager 가 접속한 플레이어를 위해 방금 만들어서 할당해준 
+                    => Room Player 프리팹을 인스턴스화 해서 플레이어에게 할당해 주고 
+                    => 이 오브젝트를 통해서 필요한 통신을 하게된다.
+
+    5. PlayerPrefab 세팅
+        a. Room Player Prefab 이 게임이 시작되기 전 게임 대기실에서 플레이어가 서버와 상호작용하기 위한 것 이라면
+            => Player Prefab 은 게임이 시작된 이후 Gameplay 씬에서 플레이어가 서버와 상호작용하기 위한 것
+        b. AmongUsGamePlayer 스크립트 생성
+            => Mirror 네임스페이스 등록
+            => NetworkBehaviour 상속
+        c. 빈 오브젝트에 스크립트 부작, 프리팹 화
+        d. Player Prefab 에 지정
+
+    6. Game Room 생성 기능 구현
+        a. 방을 생성하고 호스트 서버를 여는 기능을 구현한다.
+        b. CreateRoomUI 스크립트로 간다.
+            => Mirror 네임스페이스 등록
+        c. 호스트 서버를 여는 함수를 만든다. CreateRoom()
+            {
+                1. AmongUsRoomManager.singleton 으로 씬에 있는 네트워크 매니저를 가져 온다.
+                var manager = AmongUsRoomManager.singleton;
+                2. StartHost 함수를 호출
+                manager.StartHost();
+            }
+        d. StartHost() 함수는 서버를 여는 동시에 클라이언트로써 게임에 참가하도록 만들어 주는 함수다.
+            => 원래는 서버를 열기 전에 Room Manager 에 만들고자 하는 방의 설정을 전달하고 세팅하는 과정이 필요하다.
+        e. 에디터로 돌아가 OK 버튼에 함수를 연결한다.
+
+Among Us Room Manager 오브젝트에 NetworkRoomManager 를 상속받은 스크립트를 부착한 뒤에
+NetworkInfo 에 Transport 가 None 일 경우 해당 Manager 오브젝트에 Kcp Transport 컴포넌트를 부착하고
+해당 컴포넌트를 끌어다가 Transport 에 지정해 준다.
+NetworkRoomPlayer 를 상속받은 프리팹에 Network Identity 컴포넌트를 부착한다.
+*/
